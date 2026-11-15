@@ -3,10 +3,12 @@ from src.constants.enums import ReviewStatus
 from src.models.entities import LifeReview
 from src.utils import repository as repo
 from src.utils.identity import new_id, now
+from src.services.run import artifact_missing
 def list_reviews(): return repo.all_rows("reviews")
 def create(data,user):
     run=repo.get("runs",data.run_id)
     if run["status"]!="completed": raise ValueError("只有已完成的运行可提交复核")
+    if artifact_missing(run): raise ValueError("结果文件缺失，运行尚未可复核；请等待自动恢复重算")
     if any(r["run_id"]==data.run_id and r["status"] in ("pending","approved") for r in repo.all_rows("reviews")): raise HTTPException(409,"该运行已有待审或通过的复核")
     item=LifeReview(new_id("rev"),data.run_id,data.comment,created_at=now())
     return repo.put("reviews",item)

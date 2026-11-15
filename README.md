@@ -72,11 +72,19 @@ Greenwood方差为S²Σ[d/(n(n−d))]。S在(0,1)时给逐点log-log 95%区间�
 
 Seed固定2301生成360件、A/B两组，失效时间和独立观察截止随机模拟并按5小时分辨率离散，含并列事件/删失。SEED_DEMO=true自动seed，自然键insert-only，重复运行不新增、不覆盖手工修改；失败记录日志。演示数据不代表真实加工质量。
 
-环境变量DATABASE_URL、REDIS_URL、JWT_SECRET、SEED_DEMO、TASK_MODE、ARTIFACT_DIR及端口/口令见.env.example。前端npm ci使用已验证锁版本，只改项目根包名。后端本地开发配置PostgreSQL/Redis并安装requirements，运行uvicorn src.main:app --reload；前端npm ci && npm run dev，通过Nginx或/api开发代理访问后端。
+环境变量DATABASE_URL、REDIS_URL、JWT_SECRET、SEED_DEMO、TASK_MODE、ARTIFACT_DIR及端口/口令见.env.example。运行生命周期另有RUN_LEASE_SECONDS（租约秒数，默认45）、RUN_MAX_ATTEMPTS（单运行最多尝试次数，默认3）、RUN_RECOVERY_INTERVAL（恢复扫描间隔秒，默认10）。前端npm ci使用已验证锁版本，只改项目根包名。后端本地开发配置PostgreSQL/Redis并安装requirements，运行uvicorn src.main:app --reload；前端npm ci && npm run dev，通过Nginx或/api开发代理访问后端。
+
+## 运行中断与恢复
+
+排队或计算中的进程意外退出时，worker的恢复扫描会按原运行编号把运行重新置为待处理并重算试件数据；不会新增运行、不会替换结果。领取运行使用数据库行级锁和每次尝试独有的attempt_token：多个计算进程同时领取或旧进程恢复时，最多一个进程能进入计算，且只有持有当前token的尝试能在发布事务内写结果。迟到的旧结果只能写入`.staging`暂存文件，发布前发现token已被取代就直接丢弃，不能覆盖已发布结果。
+
+结果文件先写入暂存文件并fsync，再在持有行锁的事务内原子替换为`<run_id>.json`，最后才把行状态改为completed。因此写文件失败不会显示完成；失败原因、尝试次数与时间写入运行行，可重试的失败保持待处理等恢复扫描重算，达到最大尝试次数才settle为最终failed。恢复扫描还会修复“已完成但结果文件缺失”的运行：若行内仍有完整结果则原地重建文件，绝不暴露“页面已完成、文件不存在”。复核提交与报告生成都会校验结果文件存在；报告CSV先落盘再插入报告行，写盘失败不会留下不可下载的报告。
+
+结果页与运行选择器展示当前状态、最终状态、尝试次数/上限、最近失败原因与时间、执行进程、结果文件及SHA256；最终失败可用“使用原运行编号重试”。既有运行、复核与报告不因恢复而删除或改写。
 
 ## 已知边界
 
-数据全部模拟，删失机制的非信息性需要试验组判断，应用不自动证明。未实现风险比/精确小样本检验/左截断/竞争风险。Redis出队后worker强杀无自动重投，需要重新提交；JSON载荷无多人编辑乐观锁和迁移回滚。默认账号仅本地演示。
+数据全部模拟，删失机制的非信息性需要试验组判断，应用不自动证明。未实现风险比/精确小样本检验/左截断/竞争风险。恢复扫描按租约判定中断，时钟需在worker与数据库间保持合理同步；JSON载荷无多人编辑乐观锁和迁移回滚。默认账号仅本地演示。
 
 真实容器、HTTP、手算oracle、浏览器主流程及截图在批次test-artifacts/gb-2301，源码不含测试截图/日志/报告。
 

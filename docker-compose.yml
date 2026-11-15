@@ -34,6 +34,9 @@ services:
       SEED_DEMO: ${SEED_DEMO:-true}
       TASK_MODE: redis
       ARTIFACT_DIR: /artifacts
+      RUN_LEASE_SECONDS: ${RUN_LEASE_SECONDS:-45}
+      RUN_MAX_ATTEMPTS: ${RUN_MAX_ATTEMPTS:-3}
+      RUN_RECOVERY_INTERVAL: ${RUN_RECOVERY_INTERVAL:-10}
     ports: ["${BACKEND_PORT:-19220}:8000"]
     volumes: ["shared-artifacts:/artifacts"]
     depends_on:

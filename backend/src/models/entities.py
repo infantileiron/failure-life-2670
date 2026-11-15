@@ -31,6 +31,24 @@ class SurvivalRun:
  result:dict[str,Any]=field(default_factory=dict)
  error:str=''
  created_at:str=''
+ attempts:int=0
+ max_attempts:int=0
+ attempt_token:str=''
+ last_error:str=''
+ last_error_at:str=''
+ retryable:bool=False
+ final_status:str=''
+ worker:str=''
+ lease_until:float=0.0
+ heartbeat_at:float=0.0
+ recovery_at:float=0.0
+ started_at:str=''
+ finished_at:str=''
+ updated_at:str=''
+ published_at:str=''
+ artifact:str=''
+ artifact_sha256:str=''
+ artifact_size:int=0
 @dataclass
 class LifeReview:
  id:str

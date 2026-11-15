@@ -1,5 +1,6 @@
-from fastapi import APIRouter,Depends
+from fastapi import APIRouter,Depends,HTTPException
 from src.controllers import run as controller
+from src.services import run as service
 from src.schemas.entities import RunInput
 from src.services.auth import current,editor,admin
 router=APIRouter(prefix="/runs",tags=["runs"])
@@ -9,3 +10,10 @@ def list_items(user=Depends(current)): return controller.list_items()
 def create(data:RunInput,user=Depends(editor)): return controller.create(data)
 @router.get("/{id}")
 def detail(id:str,user=Depends(current)): return controller.detail(id)
+@router.post("/recover",status_code=202)
+def recover(user=Depends(editor)):
+ return {"requeued":service.recover_pending()}
+# Kept last so "recover" is not swallowed by the {id} route.
+@router.post("/{id}/retry",status_code=202)
+def retry(id:str,user=Depends(editor)):
+ return controller.retry(id)

@@ -1,1 +1,1 @@
-import {request} from './client';import type {Run} from '../types/entities';export const list=()=>request<Run[]>('/runs');export const create=(data:unknown)=>request<Run>('/runs','POST',data);
+import {request} from './client';import type {Run} from '../types/entities';export const list=()=>request<Run[]>('/runs');export const create=(data:unknown)=>request<Run>('/runs','POST',data);export const retry=(id:string)=>request<Run>('/runs/'+id+'/retry','POST');export const recover=()=>request<{requeued:string[]}>('/runs/recover','POST');
